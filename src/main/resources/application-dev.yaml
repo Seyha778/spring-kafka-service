@@ -1,0 +1,109 @@
+
+spring:
+
+  # PostgreSQL
+  datasource:
+    url: jdbc:postgresql://localhost:5432/digital
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 1
+      minimum-idle: 1
+      connection-timeout: 30000
+
+  # JPA / Hibernate
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        jdbc:
+          time_zone: UTC
+
+  # Kafka
+  kafka:
+    bootstrap-servers: localhost:9092
+
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        linger.ms: 20
+
+    consumer:
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      enable-auto-commit: false
+      max-poll-records: 50
+      auto-offset-reset: latest
+      properties:
+        spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
+        spring.deserializer.key.delegate.class: org.apache.kafka.common.serialization.StringDeserializer
+        spring.json.trusted.packages: com.apextech.springkafka.dto
+
+    listener:
+      ack-mode: manual_immediate
+      concurrency: 1
+      observation-enabled: true
+    template:
+      observation-enabled: true
+
+  # Redis
+  cache:
+    type: redis
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      username: default
+      password: mypassword
+      timeout: 30000ms
+
+# Local development logging
+logging:
+  level:
+    org.springframework.kafka: INFO
+    org.hibernate.SQL: DEBUG
+    org.hibernate.orm.jdbc.bind: TRACE
+    org.springframework.data.redis: INFO
+
+app:
+  kafka:
+    topic:
+      partitions: 3
+      replication-factor: 1
+      min-insync-replicas: 1
+      retention-ms: 259200000
+      cleanup-policy: delete
+
+  campaign:
+    onboard:
+      topic: dev.cashback-onboard-txn.claimed
+      group-id: dev.digital-event-stream.cashback-onboard-txn
+      batch-size: 200
+      max-batches-per-run: 10
+      scheduler-zone: Asia/Phnom_Penh
+      instance-id: ${HOSTNAME:digital-event-stream-local}
+      prefund-usd: "105070381"
+      prefund-khr: "105070252"
+
+  rate-limiter:
+    key-prefix: "cashback:rate:"
+    limit-per-window: 1
+    window-millis: 1000
+    retry-backoff-millis: 1100
+
+msa-service:
+  ufc-send-money:
+    base-url: https://qa.apextech.com/ufc-send-money
+    status-path: /v1/transactions/{customerId}/status
+    credit-path: /v1/transactions/credit
+    commit-url: /transfer/v1/commit
+  cdp:
+    base-url: https://qa.apextech.com/ufc-customer-data-platform
+    account-detail-url: /account/detail?accountNo=
